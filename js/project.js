@@ -188,24 +188,20 @@ $(function(){
 	}
 
 	function playSonarPing(){
-		var source = audioContext.createBufferSource();
-		source.buffer = sonarPing;
-		source.connect(audioContext.destination);
-		source.start(0);
+		playSound(sonarPing);
 	}
 
 	function playTreasureSound(){
-		var source = audioContext.createBufferSource();
-		source.buffer = treasureSound;
-		source.connect(audioContext.destination);
-		source.start(0);
+		playSound(treasureSound);
 	}
 
 	function playSound(buffer){
-		var source = audioContext.createBufferSource();
-		source.buffer = buffer;
-		source.connect(audioContext.destination);
-		source.start(0);
+		if(audioContext){
+			var source = audioContext.createBufferSource();
+			source.buffer = buffer;
+			source.connect(audioContext.destination);
+			source.start(0);
+		}
 	}
 
 	function distanceBetween(a, b){
@@ -240,12 +236,15 @@ $(function(){
 		actualGridY = canvasHeight / Math.round(canvasHeight / gridSize);
 
 		gameBoard.on("click", function(e){
-			var dist,
+			var offset = gameBoard.offset(),
+				x = e.pageX - offset.left,
+				y = e.pageY - offset.top,
+				dist,
 				minDist = canvasWidth,
 				i = treasures.length - 1,
 				buoy;
 			for (; i >= 0; i--) {
-				dist = distanceBetween(treasures[i],{x:e.offsetX,y:e.offsetY});
+				dist = distanceBetween(treasures[i],{x:x,y:y});
 				minDist = Math.min(minDist, dist);
 				if(dist < 32){
 					treasures[i].components.push(makeSpriteComponent(chestImage,32,32));
@@ -262,8 +261,8 @@ $(function(){
 			};
 			// if(buoys.length < 16){
 				buoy = makeGameObject();
-				buoy.x = e.offsetX;// - (e.offsetX % actualGridX);
-				buoy.y = e.offsetY;// - (e.offsetY % actualGridY);
+				buoy.x = x;// - (e.offsetX % actualGridX);
+				buoy.y = y;// - (e.offsetY % actualGridY);
 				calculateBuoyScore(buoy);
 				buoy.components.push(makeAnimatedRadarRenderComponent());
 				buoy.components.push(makeAnimatedSpriteComponent([buoyImage,buoyImageOff],48,48,37*(48/75),55*(48/75),1));
@@ -276,7 +275,9 @@ $(function(){
 		});
 
 		window.AudioContext = window.AudioContext||window.webkitAudioContext;
-		audioContext = new AudioContext();
+		if(AudioContext) {
+			audioContext = new AudioContext();
+		}
 	}
 
 	function bootstrapResources(){
@@ -287,11 +288,13 @@ $(function(){
 		chestImage = new Image();
 		chestImage.src = "img/chest.gif";
 
-		var bl = new BufferLoader(audioContext, ['audio/sonarPing.wav', 'audio/coin.mp3'], function(buffer){
-			sonarPing = buffer[0];
-			treasureSound = buffer[1];
-		});
-		bl.load();
+		if(audioContext){
+			var bl = new BufferLoader(audioContext, ['audio/sonarPing.wav', 'audio/coin.mp3'], function(buffer){
+				sonarPing = buffer[0];
+				treasureSound = buffer[1];
+			});
+			bl.load();
+		}
 	}
 
 	function bootstrapGameGraph(){
